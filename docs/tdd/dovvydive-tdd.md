@@ -144,6 +144,32 @@ model Session {
   
   conversations Conversation[]
 }
+
+model Conversation {
+  id        String   @id @default(uuid())
+  sessionId String
+  session   Session  @relation(fields: [sessionId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  messages  Message[]
+}
+
+model Message {
+  id             String   @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  role           Role     // USER, ASSISTANT, SYSTEM
+  content        String   @db.Text
+  agentUsed      String?  // Which agent handled this
+  createdAt      DateTime @default(now())
+}
+
+enum Role {
+  USER
+  ASSISTANT
+  SYSTEM
+}
 ```
 
 #### Content Data
@@ -257,7 +283,7 @@ The system uses a "Router-Solver" pattern.
 2. **Retrieval**:
    - User Query -> Embedding -> Vector Search (Neon Postgres) -> Top K Chunks.
 3. **Generation**:
-   - System Prompt + Retrieved Chunks + User Query -> Gemini 2.5 Flash -> Response.
+   - System Prompt + Conversation History (Last 5 turns) + Retrieved Chunks + User Query -> Gemini 2.5 Flash -> Response.
 
 ### 6.3 Prompt Engineering Strategy
 
