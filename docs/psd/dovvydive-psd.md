@@ -41,6 +41,7 @@ An intelligent, conversational AI assistant that understands diving terminology,
 - **Time Saved**: Average 80% reduction in trip planning time vs. manual research
 - **Geographic Coverage**: 100+ dive sites catalogued within 6 months
 - **Session Completion**: 60%+ of sessions result in exported trip plan or operator contact
+- **Returning Visitor Rate**: 15%+ of users return within 3 months to plan another trip
 
 ---
 
@@ -160,9 +161,9 @@ An intelligent, conversational AI assistant that understands diving terminology,
 
 ### F-1: Conversational AI Chatbot (P0)
 
-- **Description**: Natural language chatbot powered by Google ADK multi-agent RAG system using GPT-5-mini
+- **Description**: Natural language chatbot powered by Google ADK multi-agent RAG system using Google Gemini 2.5 Flash
 - **Priority**: P0 (Core feature)
-- **Dependencies**: Google ADK framework, GPT-5-mini API access, RAG knowledge base
+- **Dependencies**: Google ADK framework, Google Gemini 2.5 Flash API access, RAG knowledge base
 
 ### F-2: Malaysia Dive Site Knowledge Base (P0)
 
@@ -277,7 +278,7 @@ An intelligent, conversational AI assistant that understands diving terminology,
   - Logistics & Planning Agent
   - Safety & Certification Agent
   - Marine Life Specialist Agent
-- **FR-10**: System SHALL use GPT-5-mini as the underlying LLM for all agents
+- **FR-10**: System SHALL use Google Gemini 2.5 Flash as the underlying LLM for all agents
 - **FR-11**: System SHALL route user queries to the most appropriate agent based on intent classification
 - **FR-12**: System SHALL orchestrate multi-agent responses when query requires multiple domains of knowledge
 - **FR-13**: System SHALL retrieve and cite sources from RAG knowledge base in agent responses
@@ -307,6 +308,7 @@ An intelligent, conversational AI assistant that understands diving terminology,
 
 - **FR-23**: System SHALL display safety disclaimer on first chat interaction requiring user acknowledgment
 - **FR-23a**: Disclaimer SHALL state that all recommendations are informational only and users must confirm details, availability, and safety with dive operators before booking
+- **FR-23b**: System SHALL require user to confirm they are 18 years or older before starting the chat
 - **FR-24**: System SHALL warn users when they ask about dive sites beyond their certification level
 - **FR-25**: System SHALL recommend DAN (Divers Alert Network) or equivalent insurance for all trips
 - **FR-26**: System SHALL provide emergency contact information and nearest hyperbaric chambers for recommended dive sites
@@ -456,6 +458,12 @@ An intelligent, conversational AI assistant that understands diving terminology,
 - **NFR-40**: System SHALL queue user messages while offline and send when reconnected
 - **NFR-41**: System SHALL cache last conversation state for offline viewing
 
+### SEO & Discovery
+
+- **NFR-42**: Public pages (Landing, Dive Site Gallery) SHALL be server-side rendered (SSR) for SEO indexing
+- **NFR-43**: System SHALL generate dynamic sitemap.xml for all dive site pages
+- **NFR-44**: All public pages SHALL implement proper Open Graph and Twitter Card meta tags
+
 ---
 
 ## 8. Data Model
@@ -576,6 +584,7 @@ An intelligent, conversational AI assistant that understands diving terminology,
 {
   "operatorId": "uuid",
   "name": "string",
+  "operatorType": "enum: DIVE_CENTER, RESORT, LIVEABOARD",
   "location": "string",
   "servingDiveSites": ["uuid array of siteIds"],
   "contactInfo": {
@@ -685,6 +694,7 @@ An intelligent, conversational AI assistant that understands diving terminology,
 ### PostgreSQL with pgvector (Critical)
 
 - **Purpose**: Primary database for relational data and vector embeddings for RAG
+- **Schema Strategy**: Single vector table with metadata filtering (e.g., `language` column) for multilingual support (English/Chinese)
 - **API Usage**: SQL queries, pgvector operations for semantic search
 - **Authentication**: Database credentials (username/password)
 - **Rate Limits**: None (self-hosted or managed database)
@@ -700,7 +710,7 @@ An intelligent, conversational AI assistant that understands diving terminology,
 ### Google ADK Framework (Critical)
 
 - **Purpose**: Multi-agent RAG orchestration and LLM inference
-- **API Usage**: Google ADK API for agent coordination and GPT-5-mini model access
+- **API Usage**: Google ADK API for agent coordination and Google Gemini 2.5 Flash model access
 - **Authentication**: API key-based authentication
 - **Rate Limits**: TBD based on Google ADK pricing tier (assume 1000 requests/min)
 - **Required Permissions**: Read/write access to knowledge base, model inference
@@ -709,7 +719,7 @@ An intelligent, conversational AI assistant that understands diving terminology,
   - Fallback to cached responses for service downtime
   - Display user-friendly error message if quota exceeded
 - **Dependency Risks**:
-  - HIGH: If Google ADK or GPT-5-mini becomes unavailable, core functionality breaks
+  - HIGH: If Google ADK or Google Gemini 2.5 Flash becomes unavailable, core functionality breaks
   - Mitigation: Implement architecture to allow model swapping (e.g., fall back to GPT-4)
 
 ### Google Maps API (High Priority)
@@ -846,6 +856,7 @@ An intelligent, conversational AI assistant that understands diving terminology,
     - Message text with markdown formatting
     - Inline images/photos (max 3 per message)
     - "Sources" expandable section (shows RAG citations)
+    - Feedback buttons: Thumbs Up/Down icon
     - Action buttons: "Save Trip", "Show on Map", "Contact Operator"
 
 #### Trip Detail View
@@ -914,9 +925,9 @@ An intelligent, conversational AI assistant that understands diving terminology,
 
 ### Technical Assumptions
 
-- **ASSUM-1**: Google ADK framework supports GPT-5-mini model (assumed but not verified as of Nov 2025)
-- **ASSUM-2**: GPT-5-mini has sufficient context window (min 32k tokens) for multi-turn conversations
-- **ASSUM-2a**: GPT-5-mini supports high-quality responses in both English and Chinese languages
+- **ASSUM-1**: Google ADK framework supports Google Gemini 2.5 Flash model natively (verified Nov 2025)
+- **ASSUM-2**: Google Gemini 2.5 Flash has sufficient context window (min 32k tokens) for multi-turn conversations
+- **ASSUM-2a**: Google Gemini 2.5 Flash supports high-quality responses in both English and Chinese languages
 - **ASSUM-3**: Google ADK multi-agent mode allows minimum 5 concurrent specialized agents
 - **ASSUM-4**: PostgreSQL with pgvector extension suitable for RAG vector storage and relational data
 - **ASSUM-5**: Backend will be built with Node.js/Express or Python/FastAPI
@@ -924,7 +935,7 @@ An intelligent, conversational AI assistant that understands diving terminology,
 - **ASSUM-7**: PostgreSQL suitable for conversation, user data, and vector storage (via pgvector extension)
 - **ASSUM-8**: System can be deployed on cloud platform (AWS, GCP, or Azure)
 - **ASSUM-9**: API response times from Google ADK are under 3 seconds for 90% of queries
-- **ASSUM-10**: WebSocket or Server-Sent Events available for real-time chat streaming
+- **ASSUM-10**: Standard REST API sufficient for batch responses (streaming/WebSockets not required for MVP)
 
 ### Business Assumptions
 
@@ -932,11 +943,11 @@ An intelligent, conversational AI assistant that understands diving terminology,
 - **ASSUM-12**: Dive operators willing to provide data or be listed without formal partnerships initially
 - **ASSUM-13**: Platform is recommendation and information-only; no booking/payment functionality (users contact operators directly)
 - **ASSUM-13a**: Users must verify all details with dive operators before booking; platform not liable for accuracy of recommendations
-- **ASSUM-14**: Revenue model TBD (potential affiliate commissions, premium subscriptions, or advertising)
+- **ASSUM-14**: Revenue model is Affiliate Commissions (accommodation/transport) and Lead Generation (dive operators); no direct payments in MVP
 - **ASSUM-15**: Legal liability disclaimer sufficient for AI-generated dive recommendations (consult legal team)
 - **ASSUM-16**: Target audience has reliable internet access (not optimizing for offline-first)
 - **ASSUM-17**: Marketing budget available for user acquisition post-launch
-- **ASSUM-18**: Initial user base will be organic growth + dive community outreach
+- **ASSUM-18**: Initial user base acquisition via Organic SEO (high-intent keywords) and dive community engagement
 
 ### User Assumptions
 
@@ -966,7 +977,7 @@ An intelligent, conversational AI assistant that understands diving terminology,
 
 ### Integration Assumptions
 
-- **ASSUM-35**: Google ADK + GPT-5-mini API pricing is affordable for projected usage (need to validate cost per query)
+- **ASSUM-35**: Google Gemini 2.5 Flash API costs estimated to be lower than mini; Google ADK framework is free.
 - **ASSUM-36**: Google Maps API free tier sufficient for MVP (can upgrade if needed)
 - **ASSUM-37**: Weather API free tier sufficient for MVP
 - **ASSUM-38**: No blockchain or Web3 integration required (standard web2 architecture)
@@ -978,67 +989,107 @@ An intelligent, conversational AI assistant that understands diving terminology,
 
 ### Critical Questions Requiring Immediate Clarification
 
-1. **Q-1**: Does GPT-5-mini model exist and is it accessible via Google ADK as of Nov 2025? (Need to verify model availability)
-2. **Q-2**: What is the exact pricing model for Google ADK + GPT-5-mini? (Critical for budget planning)
-3. **Q-3**: ✓ ANSWERED - Platform is recommendation and information-only; no booking/payment functionality
-4. **Q-4**: ✓ ANSWERED - No user accounts required for MVP; saved as future feature for personalization and trip history
-5. **Q-5**: ✓ ANSWERED - Recommendations only; users must confirm details with dive shops before booking
+1. **Q-1**: Is Google Gemini 2.5 Flash available and compatible with Google ADK?
+   - **Answer**: ✓ **Yes**. Google Gemini 2.5 Flash exists; ADK integration is native.
+2. **Q-2**: What are the licensing and cost implications?
+   - **Answer**: ✓ **Free ADK / Paid API**. Google ADK is free (open source). Google Gemini 2.5 Flash pricing: TBD (Expected lower than mini).
+3. **Q-3**: Will the platform handle bookings or payments?
+   - **Answer**: ✓ **No**. Platform is recommendation and information-only; no booking/payment functionality.
+4. **Q-4**: Do we need user accounts for MVP?
+   - **Answer**: ✓ **No**. No user accounts required for MVP; saved as future feature for personalization and trip history.
+5. **Q-5**: Are recommendations guaranteed to be available?
+   - **Answer**: ✓ **No**. Recommendations only; users must confirm details with dive shops before booking.
 
 ### Product Strategy Questions
 
-1. **Q-6**: What is the revenue model? (Affiliate commissions, premium features, advertising, SaaS to operators?)
-2. **Q-7**: Should we prioritize B2C (individual divers) or B2B (dive operators/travel agencies) initially?
-3. **Q-8**: What is the go-to-market strategy? (Organic SEO, dive community forums, social media, paid ads?)
-4. **Q-9**: Should we build email notification features for price drops or new dive sites?
-5. **Q-10**: Do we need mobile apps (iOS/Android) or is web-only sufficient for MVP?
+1. **Q-6**: What is the primary monetization strategy?
+   - **Answer**: ✓ **Affiliate & Lead Gen**. Monetize via affiliate links (accommodation/transport) and "Verified Partner" leads for dive operators.
+2. **Q-7**: Is the focus on B2C (divers) or B2B (operators)?
+   - **Answer**: ✓ **B2C Focus**. Prioritize individual divers to build traffic volume first; operator partnerships follow user growth.
+3. **Q-8**: What is the user acquisition strategy?
+   - **Answer**: ✓ **SEO & Community**. Focus on high-intent search keywords ("Sipadan diving guide") and dive community engagement.
+4. **Q-9**: Should we implement email alerts for price drops?
+   - **Answer**: ✓ **No for MVP**. Defer email alerts to V2 when user accounts are implemented.
+5. **Q-10**: Should this be a web app or native mobile app?
+   - **Answer**: ✓ **Web-only (Responsive/PWA)**. Lower barrier to entry; native apps deferred to future phases.
 
 ### Technical Architecture Questions
 
-1. **Q-11**: ✓ ANSWERED - PostgreSQL with pgvector extension for RAG knowledge base and vector storage
-   - **Q-11a**: Should we use separate vector databases per language or single multilingual index?
-2. **Q-12**: Should we implement conversation streaming (real-time token generation) or batch responses?
-3. **Q-13**: What is the data retention policy for user conversations? (Store indefinitely, 1 year, user-controlled?)
-4. **Q-14**: Should we implement A/B testing framework from day 1?
-5. **Q-15**: Do we need CDN for static assets and images? (Performance optimization)
+1. **Q-11**: What database should we use for RAG and vector storage?
+   - **Answer**: ✓ **PostgreSQL + pgvector**. PostgreSQL with pgvector extension for RAG knowledge base and vector storage.
+   - **Q-11a**: How do we handle multi-language indexing?
+     - **Answer**: ✓ **Single Index with Metadata**. Use single vector table with `language` column for filtering (e.g., `WHERE language = 'en'`).
+2. **Q-12**: Should we use streaming responses or batch?
+   - **Answer**: ✓ **Batch Responses**. Simpler to implement for MVP; streaming can be added later if latency is an issue.
+3. **Q-13**: Where should conversation history be stored?
+   - **Answer**: ✓ **No Server Storage**. Conversations exist only in browser session. Users must export (PDF/JSON) to save records.
+4. **Q-14**: Should we implement A/B testing for prompts?
+   - **Answer**: ✓ **No for MVP**. Focus on qualitative feedback and basic analytics (Google Analytics) first. A/B testing adds unnecessary complexity at this stage.
+5. **Q-15**: Do we need a CDN for images and assets?
+   - **Answer**: ✓ **Yes**. Use a CDN (e.g., Cloudflare, AWS CloudFront) for dive site images and map tiles to ensure fast loading across Asia Pacific.
 
 ### Data & Content Questions
 
-1. **Q-16**: Who will perform initial data collection and curation for 50+ dive sites?
-   - **Q-16a**: Who will handle Chinese translations - professional translators, AI-assisted, or bilingual team members?
-2. **Q-17**: What is the content update cadence? (Weekly, monthly, quarterly?)
-3. **Q-18**: Should we allow dive operators to claim and update their own listings?
+1. **Q-16**: Who will perform initial data collection and curation?
+   - **Answer**: ✓ **Internal Team + Freelance**. Initial curation by product team to ensure quality, supplemented by freelance divers for specific local knowledge.
+   - **Q-16a**: Who will handle Chinese translations?
+     - **Answer**: ✓ **AI-Assisted**. Use LLMs for initial translation with human review for accuracy.
+2. **Q-17**: What is the content update cadence?
+   - **Answer**: ✓ **Monthly**. Dive site data is relatively static; monthly updates are sufficient for MVP.
+3. **Q-18**: Should we allow dive operators to claim and update their listings?
+   - **Answer**: ✓ **No for MVP**. Manual verification by internal team first; operator portal deferred to V2.
 4. **Q-19**: Do we need user-generated content (reviews, photos) in MVP?
-5. **Q-20**: Should we scrape existing dive review sites (TripAdvisor, ScubaBoard) or avoid legal risk?
+   - **Answer**: ✓ **No for MVP**. Focus on curated, high-quality static content first.
+5. **Q-20**: Should we scrape existing dive review sites?
+   - **Answer**: ✓ **No**. Avoid scraping to minimize legal risk and dependency on external DOM structures.
 
 ### UX & Feature Prioritization Questions
 
-1. **Q-21**: Should chat interface support voice input/output? (Accessibility + mobile UX)
-2. **Q-22**: Do we need social features (share trips with friends, collaborative planning)?
-3. **Q-23**: Should we gamify the experience (badges for number of dives, sites visited, etc.)?
-4. **Q-24**: Do we need a "Dive Buddy Finder" feature to connect solo divers?
-5. **Q-25**: Should the system remember user preferences across sessions (even for guests)?
+1. **Q-21**: Should we support voice interaction?
+   - **Answer**: ✓ **No for MVP**. Text-based interaction only to keep scope manageable.
+2. **Q-22**: Should we include social sharing features?
+   - **Answer**: ✓ **No for MVP**. Social features deferred to V2.
+3. **Q-23**: Should we add gamification elements?
+   - **Answer**: ✓ **No for MVP**. Gamification requires user accounts (F-3), which is a future feature.
+4. **Q-24**: Should we include a "Dive Buddy Finder"?
+   - **Answer**: ✓ **No for MVP**. Buddy finder requires user accounts and critical mass.
+5. **Q-25**: Should the AI have long-term memory across sessions?
+   - **Answer**: ✓ **No for MVP**. Session-based memory only (FR-45); no cross-session persistence for guests.
 
 ### Safety & Compliance Questions
 
-1. **Q-26**: Should we require users to acknowledge disclaimer before every trip recommendation?
-2. **Q-27**: Do we need to verify user certification levels, or trust self-reported data?
-3. **Q-28**: Should we partner with DAN (Divers Alert Network) for insurance referrals?
-4. **Q-29**: What is the process for handling emergency situations reported via the platform?
-5. **Q-30**: Do we need age verification (minimum 18 years old for scuba diving)?
+1. **Q-26**: Is a safety disclaimer required?
+   - **Answer**: ✓ **Yes**. Mandatory disclaimer acknowledgment on first load (covered in FR-23).
+2. **Q-27**: Should we verify certification levels via API?
+   - **Answer**: ✓ **No for MVP**. Trust self-reported certification level; no API integration with PADI/SSI yet.
+3. **Q-28**: Should we partner with DAN (Divers Alert Network)?
+   - **Answer**: ✓ **No**. No formal partnership with DAN for MVP, though we can still recommend them as a general safety tip.
+4. **Q-29**: How should the system handle emergency medical queries?
+   - **Answer**: ✓ **Immediate Redirection**. AI detects emergency keywords and responds with static emergency contact list (DAN, 999, Hyperbaric chambers). AI explicitly states it cannot assist in real-time emergencies.
+5. **Q-30**: Do we need an age gate?
+   - **Answer**: ✓ **Yes**. Simple age gate ("I confirm I am 18+") on the landing page or first chat interaction.
 
 ### Geographic Expansion Questions
 
-1. **Q-31**: What is the roadmap for Asia Pacific expansion beyond Malaysia? (Thailand, Philippines, Indonesia?)
-2. **Q-32**: ✓ ANSWERED - MVP supports English and Chinese; architecture designed for future language expansion
-3. **Q-33**: ✓ ANSWERED - System uses local currency (e.g., MYR) for all cost estimates; no currency conversion required
-4. **Q-34**: Should we consider liveaboard dive trips in addition to shore-based diving?
+1. **Q-31**: What is the roadmap for Asia Pacific expansion beyond Malaysia?
+   - **Answer**: ✓ **Indonesia & Philippines**. Indonesia (Raja Ampat/Komodo) and Philippines (Palawan/Cebu) are logical next steps due to proximity and popularity.
+2. **Q-32**: What languages should be supported in MVP?
+   - **Answer**: ✓ **English & Chinese**. MVP supports English and Chinese; architecture designed for future language expansion.
+3. **Q-33**: How should currency conversion be handled?
+   - **Answer**: ✓ **Local Currency Only**. System uses local currency (e.g., MYR) for all cost estimates; no currency conversion required.
+4. **Q-34**: Should we consider liveaboard dive trips?
+   - **Answer**: ✓ **Yes**. Include liveaboards as a distinct category (e.g., 'Liveaboard' vs 'Resort') in the data model, as they are critical for advanced diving in the region.
 
 ### Analytics & Optimization Questions
 
-1. **Q-35**: What are the key metrics for success dashboard? (Need to define KPIs)
-2. **Q-36**: Should we implement user feedback collection (thumbs up/down on AI responses)?
-3. **Q-37**: Do we need session replay tools (Hotjar, FullStory) to analyze user behavior?
+1. **Q-35**: What are the key metrics for the success dashboard?
+   - **Answer**: ✓ **Engagement & Conversion**. Key metrics: Trip Plan Completion Rate, Session Duration (>2 mins), User Satisfaction (Thumbs Up/Down), and Returning Visitor Rate.
+2. **Q-36**: Should we implement user feedback collection?
+   - **Answer**: ✓ **Yes**. Simple Thumbs Up/Down on AI responses to train RAG relevance.
+3. **Q-37**: Do we need session replay tools?
+   - **Answer**: ✓ **No for MVP**. Use Google Analytics events first. Session replay has privacy implications.
 4. **Q-38**: Should we track and optimize for SEO from day 1?
+   - **Answer**: ✓ **Yes**. Critical for organic acquisition. Ensure landing pages for top dive sites are server-side rendered (SSR) or pre-rendered for indexing.
 
 ---
 
@@ -1149,6 +1200,35 @@ An intelligent, conversational AI assistant that understands diving terminology,
 
 ---
 
+## 14. Future Improvements (Post-MVP Roadmap)
+
+### User Accounts & Personalization
+
+- **User Profiles**: Registration and login to save preferences, certification details, and trip history.
+- **Cross-Session Memory**: AI remembers user context and preferences across different sessions.
+- **Gamification**: Achievement badges for number of dives planned, sites visited, or contributions.
+
+### Social & Community
+
+- **Dive Buddy Finder**: Feature to connect solo divers with others planning trips to the same location.
+- **Social Sharing**: Collaborative trip planning tools and ability to share itineraries with friends.
+- **Community Reviews**: User-generated reviews and photos for dive sites and operators.
+
+### Advanced Features
+
+- **Certification Verification**: API integration with PADI/SSI to automatically verify diver certification levels.
+- **Price Alerts**: Email notifications for price drops on tracked dive packages.
+- **Native Mobile Apps**: Dedicated iOS and Android applications for offline access and better mobile experience.
+- **Voice Interface**: Voice input/output for hands-free interaction with the chatbot.
+
+### Geographic Expansion
+
+- **Indonesia**: Expansion to Raja Ampat, Komodo, and Bali.
+- **Philippines**: Expansion to Palawan, Cebu, and Bohol.
+- **Thailand**: Expansion to Similan Islands and Koh Tao.
+
+---
+
 ## END OF PRODUCT SPECIFICATION DOCUMENT
 
 ---
@@ -1160,7 +1240,7 @@ An intelligent, conversational AI assistant that understands diving terminology,
 ## Next Steps
 
 1. Clarify all questions in Section 12 (Open Questions)
-2. Validate Google ADK + GPT-5-mini technical feasibility
+2. Validate Google ADK + Google Gemini 2.5 Flash technical feasibility
 3. Define revenue model and go-to-market strategy
 4. Begin data collection for Malaysian dive sites
 5. Create technical architecture diagram
